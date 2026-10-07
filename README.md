@@ -56,6 +56,12 @@ _Steps 1 and 2 are built and tested (M1); the rest is on the [roadmap](#roadmap)
 5. The Parquet scan skips whole row groups using min/max statistics and reads only the columns a query needs.
 6. sqllogictest files verify correctness, and TPC-H queries are timed against DuckDB on the same hardware.
 
+## Who it helps
+
+- **Who:** Engineers and students who want to see how analytics databases execute SQL.
+- **The problem:** Engines such as DuckDB are fast but large, and hard to read end to end.
+- **How to use it:** Run SQL through a small, readable engine (binder, rule-based optimizer, vectorized Arrow executor) and compare its results and timings with DuckDB on the same data.
+
 ## Tech stack
 
 | Area | In M1 | Planned |
