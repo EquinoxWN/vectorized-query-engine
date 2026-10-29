@@ -11,8 +11,8 @@ requires-python = ">=3.11"
 dependencies = ["sqlglot>=30,<31", "pyarrow>=21", "numpy>=2"]
 
 [project.optional-dependencies]
-compare = ["duckdb>=1.5"]
-dev = ["pytest>=8", "pytest-timeout>=2.3", "ruff>=0.6", "mypy>=1.11", "pip-audit>=2.7", "duckdb>=1.5", "pyarrow-stubs"]
+compare = ["duckdb>=1.5.6,<2"]
+dev = ["pytest>=8", "pytest-timeout>=2.3", "ruff>=0.6", "mypy>=1.11", "pip-audit>=2.7", "duckdb>=1.5.6,<2", "pyarrow-stubs"]
 
 [project.scripts]
 vqe = "vectorized_query_engine.cli:main"
