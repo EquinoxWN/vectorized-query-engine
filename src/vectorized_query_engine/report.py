@@ -69,6 +69,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--scale", type=float, default=0.05)
     p.add_argument("--repeat", type=int, default=5)
     args = p.parse_args(argv)
+    if not 0 < args.scale <= 10:
+        p.error("--scale must be above 0 and at most 10")
+    if not 1 <= args.repeat <= 100:
+        p.error("--repeat must be 1 to 100")
     import duckdb
 
     tables = generate(args.scale)

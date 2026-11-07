@@ -33,6 +33,8 @@ def main(argv: list[str] | None = None) -> int:
         "--duckdb", action="store_true", help="also run the query on DuckDB and compare times"
     )
     args = p.parse_args(argv)
+    if not 0 < args.scale <= 10:
+        p.error("--scale must be above 0 and at most 10")
     engine = Engine(catalog(args.scale), optimize=not args.no_optimize)
     try:
         if args.explain:
