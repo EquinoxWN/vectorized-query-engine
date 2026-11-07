@@ -8,8 +8,8 @@ import pytest
 
 from vectorized_query_engine import Engine
 from vectorized_query_engine.executor import ExecutionError, Executor
-from vectorized_query_engine.expr import columns
-from vectorized_query_engine.optimizer import Optimizer
+from vectorized_query_engine.expr import Bin, Col, Lit, columns
+from vectorized_query_engine.optimizer import Optimizer, _equivalences
 from vectorized_query_engine.plan import Aggregate, Filter, Join, Plan, Scan, output_columns
 from vectorized_query_engine.queries import QUERIES
 
@@ -141,3 +141,55 @@ def test_filters_that_are_not_column_versus_constant_do_not_cross(engine: Engine
         )
     )
     assert s["orders"].filter is None, "LIKE and filters on non-key columns stay where they are"
+
+
+def test_a_connected_relation_is_joined_before_a_cheaper_cross_product(engine: Engine) -> None:
+    # region (one name) is the smallest start; customer with c_custkey = 1 is estimated at 1 row,
+    # so crossing it is "cheaper" than joining nation; the connected nation must still come first.
+    plan = engine.plan(
+        "SELECT r_name, n_name, c_name FROM region, nation, customer "
+        "WHERE r_regionkey = n_regionkey AND r_name = 'ASIA' AND c_custkey = 1"
+    )
+    joins = [n for n in nodes(plan) if isinstance(n, Join)]
+    assert joins, plan
+    top, *below = joins
+    assert top.condition is None, "the unavoidable cross product comes last"
+    assert all(j.condition is not None for j in below), "no cross product below the top join"
+
+
+def test_or_selectivity_is_inclusion_exclusion(engine: Engine) -> None:
+    opt = Optimizer(engine.catalog)
+    a = Bin("<", Col("orders.o_totalprice", "double"), Lit(1.0, "double"), "bool")
+    b = Bin(">", Col("orders.o_totalprice", "double"), Lit(2.0, "double"), "bool")
+    assert opt.selectivity(Bin("OR", a, b, "bool")) == pytest.approx(1 / 3 + 1 / 3 - 1 / 9)
+    assert opt.selectivity(Bin("AND", a, b, "bool")) == pytest.approx(1 / 9)
+
+
+def test_columns_of_different_types_are_never_made_equivalent() -> None:
+    cond = Bin("=", Col("a.k", "int64"), Col("b.k", "double"), "bool")
+    plan = Join(Scan("t", "a", ("k",), None), Scan("u", "b", ("k",), None), cond)
+    assert _equivalences(plan) == {}
+    same = Bin("=", Col("a.k", "int64"), Col("b.k", "int64"), "bool")
+    plan = Join(Scan("t", "a", ("k",), None), Scan("u", "b", ("k",), None), same)
+    assert _equivalences(plan)["a.k"] == {"a.k", "b.k"}
+
+
+def test_an_equi_join_written_right_to_left_is_a_hash_join_not_a_cross_product(
+    engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vectorized_query_engine import executor
+
+    # Customer is the left input and the condition names the right side first.
+    monkeypatch.setattr(executor, "MAX_CROSS_ROWS", 1000)
+    sql = "SELECT count(*) AS n FROM customer JOIN orders ON o_custkey = c_custkey"
+    result = engine.sql(sql, optimize=False)
+    assert result.column("n").to_pylist() == [engine.catalog.get("orders").data.num_rows]  # type: ignore[union-attr]
+
+
+def test_pruning_keeps_the_columns_a_filter_reads(engine: Engine) -> None:
+    pred = Bin(">", Col("orders.o_totalprice", "double"), Lit(1.0, "double"), "bool")
+    scan = Scan("orders", "orders", ("o_orderkey", "o_totalprice"), None)
+    pruned = Optimizer(engine.catalog)._prune(Filter(scan, pred), {"orders.o_orderkey"})
+    assert isinstance(pruned, Filter)
+    assert isinstance(pruned.child, Scan)
+    assert pruned.child.columns == ("o_orderkey", "o_totalprice")

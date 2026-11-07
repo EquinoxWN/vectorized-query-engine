@@ -17,7 +17,7 @@ All 21 queries return exactly DuckDB's rows at scale 1. Two cannot run at all wi
 
 ![vqe-report: rows, equality with DuckDB, cells read and time per query](docs/proof/report.jpg)
 
-277 tests (21 TPC-H-style queries, 150 random queries and 16 NULL cases, each compared with DuckDB with the optimizer on and off) pass, and the dependency audit is clean:
+277 tests (21 TPC-H-style queries, 150 random queries and 16 NULL cases, each compared with DuckDB with the optimizer on and off) passed at M1 (289 since the [2026-11-01 quality pass](docs/quality/2026-11-01.md)), and the dependency audit is clean:
 
 ![pytest per file and pip-audit](docs/proof/tests.jpg)
 
@@ -80,7 +80,7 @@ Language: **Python** (3.11+). Code in [`src/vectorized_query_engine/`](src/vecto
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make setup     # install the package and dev tools
 make lint      # ruff, ruff format, mypy --strict
-make test      # 277 tests, every query checked against DuckDB
+make test      # 289 tests, every query checked against DuckDB
 make explain   # TPC-H Q3's plan without and with the optimizer
 make report    # all 21 queries at scale 1: equality with DuckDB, cells read, time
 ```
@@ -101,7 +101,8 @@ Full numbers, the Q3 plans and the analysis: [docs/results/m1.md](docs/results/m
 
 | Check | Result |
 |---|---|
-| Tests (`make test`) | **277 passed**, 0 failed |
+| Tests (`make test`) | **289 passed**, 0 failed |
+| Quality pass | 13 hand mutations: 8 killed before, all 13 after five new optimizer tests; two more on the new flag checks, both killed: [docs/quality/2026-11-01.md](docs/quality/2026-11-01.md) |
 | Same rows as DuckDB | 21 TPC-H-style queries, 150 random queries and 16 NULL-semantics queries, each with the optimizer on and off |
 | Optimizer effect (scale 1) | Q3 and Q10 cannot run as written (cross product refused); optimized they finish in under 80 ms. Optimized plans read 35% of the cells the literal plans read |
 | One rule, measured | transitive predicates took the self-join query from 52.9 ms to 6.3 ms (DuckDB: 23.7 ms) |
@@ -118,9 +119,9 @@ flowchart TB
   N["test_nulls (16)<br/>three-valued logic, IEEE division"] --> DK
   Q & RD & N --> EN["Engine: binder + optimizer + executor"]
   BD["test_binder (39)<br/>29 bad queries, folding, hostile input"] --> BI["binder.py"]
-  OP["test_optimizer (19)<br/>plan shapes, transitive filters, cells read"] --> OPT["optimizer.py"]
+  OP["test_optimizer (24)<br/>plan shapes, transitive filters, cells read,<br/>join order, pruning, estimates"] --> OPT["optimizer.py"]
   LM["test_limits (3)<br/>runaway joins refused"] --> EX["executor.py"]
-  CL["test_cli (5)"] --> CLI["vqe, vqe-report"]
+  CL["test_cli (12)<br/>incl. refused flags"] --> CLI["vqe, vqe-report"]
   DT["test_data (2)"] --> DA["data.py"]
 ```
 
@@ -162,6 +163,7 @@ What this repo must show before it counts as done:
 - [ADR 0002: sqlglot front end with our own binder](docs/adr/0002-sqlglot-front-end-with-our-own-binder.md)
 - [ADR 0003: rule-based optimizer with a greedy join order](docs/adr/0003-rule-based-optimizer-with-greedy-join-order.md)
 - [M1 results](docs/results/m1.md)
+- [Quality check 2026-11-01](docs/quality/2026-11-01.md)
 
 ## Scope
 

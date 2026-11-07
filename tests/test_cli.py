@@ -45,3 +45,19 @@ def test_report_compares_every_query_with_duckdb(capsys: pytest.CaptureFixture[s
     assert "21 of 21 results equal DuckDB's." in out
     row = next(line for line in out.splitlines() if line.startswith("| q3_shipping_priority "))
     assert "refused (too large)" in row, "Q3 as written is a cross product the executor refuses"
+
+
+@pytest.mark.parametrize("scale", ["0", "-1", "nan", "inf", "11"])
+def test_a_scale_out_of_range_is_refused(scale: str) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main([SQL, "--scale", scale])
+    assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("args", [["--repeat", "0"], ["--scale", "0"]])
+def test_report_refuses_bad_settings(args: list[str]) -> None:
+    from vectorized_query_engine.report import main as report
+
+    with pytest.raises(SystemExit) as exc:
+        report(args)
+    assert exc.value.code == 2

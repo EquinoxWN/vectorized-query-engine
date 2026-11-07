@@ -9,7 +9,7 @@ setup:
 lint:
 	$(PY) -m ruff check . && $(PY) -m ruff format --check . && $(PY) -m mypy
 
-# 277 tests: binder errors, plan shapes, 21 TPC-H-style queries and 150 random queries checked
+# 289 tests: binder errors, plan shapes, 21 TPC-H-style queries and 150 random queries checked
 # against DuckDB with the optimizer on and off, NULL semantics, safety limits and the CLI.
 test:
 	$(PY) -m pytest -q
