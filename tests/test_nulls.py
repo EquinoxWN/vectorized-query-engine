@@ -43,6 +43,8 @@ QUERIES = [
     ("SELECT t.id, u.w FROM t JOIN u ON t.a = u.a", False),
     ("SELECT count(*) AS n FROM t WHERE s LIKE 'x%'", False),
     ("SELECT id FROM t WHERE a BETWEEN 0 AND 3", False),
+    ("SELECT id, a IN (1, NULL) AS x, a NOT IN (1, NULL) AS y FROM t ORDER BY id", True),
+    ("SELECT id, a IN (1, 3) AS x, a NOT IN (1, 3) AS y FROM t ORDER BY id", True),
 ]
 
 

@@ -328,14 +328,14 @@ def evaluate(e: Expr, t: pa.Table) -> Any:
             except (pa.ArrowInvalid, pa.ArrowTypeError, OverflowError):
                 # An integer column against a fractional constant: compare as doubles.
                 v, value_set = pc.cast(v, pa.float64()), pa.array(present, pa.float64())
-            # SQL three-valued logic: a NULL input is never IN or NOT IN anything, and a NULL in the
-            # list makes NOT IN unknown for every row that is not an explicit match.
+            # SQL three-valued logic: a match is true; otherwise a NULL input or a NULL in the list
+            # makes the answer unknown (NULL), and NOT IN negates that.
             hit = pc.is_in(v, value_set=value_set, skip_nulls=True)
-            if not neg:
-                return hit
+            unknown = pc.is_null(v)
             if len(present) < len(vs):
-                return pc.and_kleene(pc.invert(hit), pa.scalar(False))
-            return pc.and_kleene(pc.invert(hit), pc.is_valid(v))
+                unknown = pc.or_(unknown, pa.scalar(True))
+            found = pc.if_else(hit, True, pc.if_else(unknown, pa.scalar(None, pa.bool_()), False))
+            return pc.invert(found) if neg else found
         case Like(arg=a, pattern=p, negated=neg):
             m = pc.match_like(evaluate(a, t), p)
             return pc.invert(m) if neg else m

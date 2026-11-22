@@ -17,7 +17,7 @@ All 21 queries return exactly DuckDB's rows at scale 1. Two cannot run at all wi
 
 ![vqe-report: rows, equality with DuckDB, cells read and time per query](docs/proof/report.jpg)
 
-277 tests (21 TPC-H-style queries, 150 random queries and 16 NULL cases, each compared with DuckDB with the optimizer on and off) passed at M1 (289 since the [2026-11-01 quality pass](docs/quality/2026-11-01.md)), and the dependency audit is clean:
+277 tests (21 TPC-H-style queries, 150 random queries and 16 NULL cases, each compared with DuckDB with the optimizer on and off) passed at M1 (289 after the [2026-11-01 quality pass](docs/quality/2026-11-01.md), 291 after the 2026-11-22 polish), and the dependency audit is clean:
 
 ![pytest per file and pip-audit](docs/proof/tests.jpg)
 
@@ -80,7 +80,7 @@ Language: **Python** (3.11+). Code in [`src/vectorized_query_engine/`](src/vecto
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make setup     # install the package and dev tools
 make lint      # ruff, ruff format, mypy --strict
-make test      # 289 tests, every query checked against DuckDB
+make test      # 291 tests, every query checked against DuckDB
 make explain   # TPC-H Q3's plan without and with the optimizer
 make report    # all 21 queries at scale 1: equality with DuckDB, cells read, time
 ```
@@ -101,7 +101,7 @@ Full numbers, the Q3 plans and the analysis: [docs/results/m1.md](docs/results/m
 
 | Check | Result |
 |---|---|
-| Tests (`make test`) | **289 passed**, 0 failed |
+| Tests (`make test`) | **291 passed**, 0 failed |
 | Quality pass | 13 hand mutations: 8 killed before, all 13 after five new optimizer tests; two more on the new flag checks, both killed: [docs/quality/2026-11-01.md](docs/quality/2026-11-01.md) |
 | Same rows as DuckDB | 21 TPC-H-style queries, 150 random queries and 16 NULL-semantics queries, each with the optimizer on and off |
 | Optimizer effect (scale 1) | Q3 and Q10 cannot run as written (cross product refused); optimized they finish in under 80 ms. Optimized plans read 35% of the cells the literal plans read |
